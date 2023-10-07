@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "quick-note-to-folder",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Quick Note To Folder is a plug in. It allows you to create new note to specific folder from highlited text thanks to hotkeys.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

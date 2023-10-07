@@ -189,8 +189,8 @@ class SampleSettingTab extends PluginSettingTab {
 				.addButton((button) =>
 					button.setButtonText("hotkey").onClick(() => {
 						app.setting.openTabById("hotkeys");
-						const tab = this.app.setting.activeTab;
-						tab.searchInputEl.value = "manager";
+						const tab = (this.app.tab.searchInputEl.value =
+							"manager");
 						tab.updateHotkeyVisibility();
 					})
 				);
