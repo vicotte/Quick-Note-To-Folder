@@ -5,7 +5,6 @@ import {
 	Setting,
 	App,
 	Modal,
-	TFolder,
 	Notice,
 	TFile,
 } from "obsidian";
@@ -29,40 +28,38 @@ export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async writeFile(
-		text: string,
+		noteName: string,
 		folder: { folderName: string }
 	): Promise<{ newFilePath: string; newNoteName: string }> {
-		const newNoteName = text.trim();
-		if (newNoteName.match(/[:;,.?!()[\]{}<>/\\|'"`~]/g)) {
+		noteName = noteName.trim();
+		if (noteName.match(/[:;,.?*!()[\]{}<>/\\|'"`~]/g)) {
 			new Notice(`Invalid character highlighted`).noticeEl.addClass(
 				"notice-error"
 			);
 			throw new Error("Invalid character highlighted");
 		}
 
-		const newFilePath = folder.folderName + "/" + newNoteName + ".md";
+		const newFilePath = folder.folderName + "/" + noteName + ".md";
 		const OFolder = this.app.vault.getAbstractFileByPath(folder.folderName);
 		const OFile = this.app.vault.getAbstractFileByPath(newFilePath);
 
-		if (OFolder !== null && !(OFolder instanceof TFolder)) {
-			await this.app.vault.createFolder(OFolder.path);
-		}
-		if (OFile instanceof TFile) {
-			new Notice(`file already existing...\n adding link`);
-		} else {
-			await this.app.vault.create(newFilePath, "");
-		}
+		OFolder === null &&
+			(await this.app.vault.createFolder(folder.folderName));
+
+		OFile === null
+			? await this.app.vault.create(newFilePath, "")
+			: new Notice(`file already existing...\n adding link`);
 
 		return {
 			newFilePath: newFilePath,
-			newNoteName: newNoteName,
+			newNoteName: noteName,
 		};
 	}
 
 	async addCommandNewFile(folder: { folderName: string }) {
 		this.addCommand({
-			id: "create-note-from-highlight-" + folder.folderName,
-			name: "Create Note from Highlight - " + folder.folderName,
+			id: "create-note-to-folder-" + folder.folderName,
+			name: "Create Note to folder " + folder.folderName,
 			editorCallback: async (editor: Editor) => {
 				const selectedText = editor.getSelection();
 				if (!selectedText) {
@@ -132,8 +129,6 @@ class SampleModal extends Modal {
 				this.result = value;
 			})
 		);
-		// Name.focus();
-		// Name.select();
 
 		new Setting(contentEl).addButton((btn) =>
 			btn
@@ -164,41 +159,61 @@ class SampleSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
+		this.add_general_setting_header();
 
 		new Setting(containerEl)
-			.setName("Folder Shortcuts")
-			.setDesc("Define shortcuts for writing to different folders")
-			.addButton((button) =>
-				button.setButtonText("Add Shortcut").onClick(() => {
+			.setName("Add New Folder")
+			.setDesc(
+				"List all the folders you want to add a shortcut to create a new note in that folder \n after adding a new folder, you need to reload the plugin and then add the shortcut for the folder in the shortcut manager"
+			);
+
+		this.plugin.settings.folders.forEach((folder, index) => {
+			const s = new Setting(containerEl)
+				.setName(`Folder Name ${index + 1}`)
+				.addText((text) => {
+					text.setPlaceholder("Enter the folder name")
+						.setValue(folder.folderName)
+						.onChange(async (value) => {
+							folder.folderName = value;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.addClass("option-text");
+				})
+				.addButton((button) =>
+					button.setButtonText("-").onClick(() => {
+						this.plugin.settings.folders.splice(index, 1);
+						this.plugin.saveSettings();
+						this.display();
+					})
+				)
+				.addButton((button) =>
+					button.setButtonText("hotkey").onClick(() => {
+						app.setting.openTabById("hotkeys");
+						const tab = this.app.setting.activeTab;
+						tab.searchInputEl.value = "manager";
+						tab.updateHotkeyVisibility();
+					})
+				);
+			s.infoEl.remove();
+		});
+
+		new Setting(containerEl).addButton((button) => {
+			button
+				.setButtonText("Add new folder shortcut")
+				.setCta()
+				.onClick(() => {
 					this.plugin.settings.folders.push({
 						folderName: "",
 					});
 					this.plugin.saveSettings();
 					this.display();
-				})
-			);
 
-		for (let i = 0; i < this.plugin.settings.folders.length; i++) {
-			const folder = this.plugin.settings.folders[i];
-			new Setting(containerEl)
-				.setName("Folder Shortcuts")
-				.setDesc("Define shortcuts for writing to different folders")
-				.addText((text) =>
-					text
-						.setPlaceholder("Enter your secret")
-						.setValue(folder.folderName)
-						.onChange(async (value) => {
-							folder.folderName = value;
-							await this.plugin.saveSettings();
-						})
-				)
-				.addButton((button) =>
-					button.setButtonText("Remove").onClick(() => {
-						this.plugin.settings.folders.splice(i, 1);
-						this.plugin.saveSettings();
-						this.display();
-					})
-				);
-		}
+					button.buttonEl.addClass("button-add");
+				});
+		});
+	}
+
+	add_general_setting_header(): void {
+		this.containerEl.createEl("h1", { text: "General Settings" });
 	}
 }

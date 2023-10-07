@@ -12,3 +12,12 @@ If your plugin does not need CSS, delete this file.
   font-weight: var(--font-bold);
 }
 
+.option-text{
+  width: 100%;
+
+}
+
+.button-add{
+  /* background-color: red; */
+}
+
