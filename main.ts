@@ -7,6 +7,7 @@ import {
 	Modal,
 	TFolder,
 	Notice,
+	TFile,
 } from "obsidian";
 
 interface MyPluginSettings {
@@ -27,42 +28,72 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
+	async writeFile(
+		text: string,
+		folder: { folderName: string }
+	): Promise<{ newFilePath: string; newNoteName: string }> {
+		const newNoteName = text.trim();
+		if (newNoteName.match(/[:;,.?!()[\]{}<>/\\|'"`~]/g)) {
+			new Notice(`Invalid character highlighted`).noticeEl.addClass(
+				"notice-error"
+			);
+			throw new Error("Invalid character highlighted");
+		}
+
+		const newFilePath = folder.folderName + "/" + newNoteName + ".md";
+		const OFolder = this.app.vault.getAbstractFileByPath(folder.folderName);
+		const OFile = this.app.vault.getAbstractFileByPath(newFilePath);
+
+		if (OFolder !== null && !(OFolder instanceof TFolder)) {
+			await this.app.vault.createFolder(OFolder.path);
+		}
+		if (OFile instanceof TFile) {
+			new Notice(`file already existing...\n adding link`);
+		} else {
+			await this.app.vault.create(newFilePath, "");
+		}
+
+		return {
+			newFilePath: newFilePath,
+			newNoteName: newNoteName,
+		};
+	}
+
+	async addCommandNewFile(folder: { folderName: string }) {
+		this.addCommand({
+			id: "create-note-from-highlight-" + folder.folderName,
+			name: "Create Note from Highlight - " + folder.folderName,
+			editorCallback: async (editor: Editor) => {
+				const selectedText = editor.getSelection();
+				if (!selectedText) {
+					//ask the user for a name of file
+					new SampleModal(this.app, async (result) => {
+						const newfile = await this.writeFile(result, folder);
+
+						const file = this.app.vault.getAbstractFileByPath(
+							newfile.newFilePath
+						);
+
+						if (file instanceof TFile) {
+							this.app.workspace.openLinkText(file.path, "");
+						}
+					}).open();
+				} else {
+					const newFile = await this.writeFile(selectedText, folder);
+					const { newFilePath, newNoteName } = newFile;
+					const wikilink = `[[${newFilePath}|${newNoteName}]]`;
+					editor.replaceSelection(wikilink);
+				}
+			},
+		});
+	}
+
 	async onload() {
 		await this.loadSettings();
 
-		for (let i = 0; i < this.settings.folders.length; i++) {
-			this.addCommand({
-				id:
-					"create-note-from-highlight-" +
-					this.settings.folders[i].folderName,
-				name:
-					"Create Note from Highlight - " +
-					this.settings.folders[i].folderName,
-				editorCallback: async (editor: Editor) => {
-					const selectedText = editor.getSelection();
-					if (!selectedText) return;
-
-					const newNoteName = selectedText.trim();
-
-					const folder = this.app.vault.getAbstractFileByPath(
-						this.settings.folders[i].folderName
-					);
-
-					if (newNoteName) {
-						new Notice(`Hello!`);
-						const folderPath = this.settings.folders[i].folderName;
-						const newNotePath = `${folderPath}/${newNoteName}.md`;
-
-						if (!(folder instanceof TFolder)) {
-							await this.app.vault.createFolder(folderPath);
-						}
-						await this.app.vault.create(newNotePath, "");
-						const wikilink = `[[${newNoteName}]]`;
-						editor.replaceSelection(wikilink);
-					}
-				},
-			});
-		}
+		this.settings.folders.forEach((folder) => {
+			this.addCommandNewFile(folder);
+		});
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 	}
 
@@ -82,14 +113,37 @@ export default class MyPlugin extends Plugin {
 }
 
 class SampleModal extends Modal {
-	plugin: MyPlugin;
-	constructor(app: App) {
+	result: string;
+	onSubmit: (result: string) => void;
+
+	constructor(app: App, onSubmit: (result: string) => void) {
 		super(app);
+		this.onSubmit = onSubmit;
 	}
 
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.setText(this.plugin.settings.folders[0].folderName);
+		contentEl.createEl("h2", { text: "Create New Note" });
+		contentEl.createEl("p", {
+			text: "Enter the name of the new note",
+		});
+		new Setting(contentEl).setName("Name").addText((text) =>
+			text.onChange((value) => {
+				this.result = value;
+			})
+		);
+		// Name.focus();
+		// Name.select();
+
+		new Setting(contentEl).addButton((btn) =>
+			btn
+				.setButtonText("Submit")
+				.setCta()
+				.onClick(() => {
+					this.close();
+					this.onSubmit(this.result);
+				})
+		);
 	}
 
 	onClose() {

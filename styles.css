@@ -6,3 +6,9 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+.notice-error{
+  background-color: var(--background-modifier-error);
+  font-size: var(--font-ui-larger);
+  font-weight: var(--font-bold);
+}
+
