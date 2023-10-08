@@ -1,7 +1,7 @@
 {
 	"id": "quick-note-to-folder",
 	"name": "quick note to folder",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.4.14",
 	"description": "Quick Note To Folder is a plug in. It allows you to create new note to specific folder from highlited text thanks to hotkeys.",
 	"author": "Victor DUGUÉ",
