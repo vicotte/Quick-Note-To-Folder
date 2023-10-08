@@ -8,6 +8,7 @@ import {
 	Notice,
 	TFile,
 } from "obsidian";
+import { FolderSuggest } from ".suggesters/FileSuggest";
 
 interface MyPluginSettings {
 	folders: [
@@ -64,7 +65,7 @@ export default class MyPlugin extends Plugin {
 				const selectedText = editor.getSelection();
 				if (!selectedText) {
 					//ask the user for a name of file
-					new SampleModal(this.app, async (result) => {
+					new AskNoteNameModal(this.app, async (result) => {
 						const newfile = await this.writeFile(result, folder);
 
 						const file = this.app.vault.getAbstractFileByPath(
@@ -91,7 +92,7 @@ export default class MyPlugin extends Plugin {
 		this.settings.folders.forEach((folder) => {
 			this.addCommandNewFile(folder);
 		});
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new QuickNoteToFolderSettingsTab(this.app, this));
 	}
 
 	onunload() {}
@@ -109,7 +110,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
+class AskNoteNameModal extends Modal {
 	result: string;
 	onSubmit: (result: string) => void;
 
@@ -147,7 +148,7 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
+class QuickNoteToFolderSettingsTab extends PluginSettingTab {
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {
@@ -167,17 +168,46 @@ class SampleSettingTab extends PluginSettingTab {
 				"List all the folders you want to add a shortcut to create a new note in that folder \n after adding a new folder, you need to reload the plugin and then add the shortcut for the folder in the shortcut manager"
 			);
 
+		containerEl.createEl("h3", { text: "Folders" } as const);
 		this.plugin.settings.folders.forEach((folder, index) => {
 			const s = new Setting(containerEl)
 				.setName(`Folder Name ${index + 1}`)
-				.addText((text) => {
-					text.setPlaceholder("Enter the folder name")
-						.setValue(folder.folderName)
-						.onChange(async (value) => {
-							folder.folderName = value;
-							await this.plugin.saveSettings();
-						});
-					text.inputEl.addClass("option-text");
+				// OLD CODE
+				// .addText((text) => {
+				// 	text.setPlaceholder("Enter the folder name")
+				// 		.setValue(folder.folderName)
+				// 		.onChange(async (value) => {
+				// 			folder.folderName = value;
+				// 			await this.plugin.saveSettings();
+				// 		});
+				// 	text.inputEl.addClass("option-text");
+				// })
+
+				.addSearch((cb) => {
+					new FolderSuggest(cb.inputEl);
+					cb.setPlaceholder("test");
+					// cb.setValue(folder.path);
+					cb.setValue(folder.folderName);
+					// cb.onChange(async (value) => {
+					// 	const oldCommandName =
+					// 		folder.commandName && folder.commandName.length > 0
+					// 			? folder.commandName
+					// 			: value;
+					// 	folder.path = value;
+					// 	folder.commandName = oldCommandName;
+					// 	await this.plugin.addNewCommands(
+					// 		oldCommandName,
+					// 		folder
+					// 	);
+					// 	await this.plugin.removeCommands();
+					// 	await this.plugin.saveSettings();
+					// });
+					cb.onChange(async (value) => {
+						folder.folderName = value;
+						await this.plugin.saveSettings();
+					});
+					cb.inputEl.addClass("option-text");
+					// this.addTooltip(i18next.t("path"), cb.inputEl);
 				})
 				.addButton((button) =>
 					button.setButtonText("-").onClick(() => {
@@ -186,6 +216,7 @@ class SampleSettingTab extends PluginSettingTab {
 						this.display();
 					})
 				);
+
 			// button to add hotkey. Work in progress
 
 			// .addButton((button) =>
