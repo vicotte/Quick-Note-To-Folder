@@ -14,5 +14,8 @@ If your plugin does not need CSS, delete this file.
 
 .option-text{
   width: 100%;
+}
 
+.search-input-container{
+  width: 100%;
 }
