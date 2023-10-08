@@ -185,15 +185,17 @@ class SampleSettingTab extends PluginSettingTab {
 						this.plugin.saveSettings();
 						this.display();
 					})
-				)
-				.addButton((button) =>
-					button.setButtonText("hotkey").onClick(() => {
-						app.setting.openTabById("hotkeys");
-						const tab = (this.app.tab.searchInputEl.value =
-							"manager");
-						tab.updateHotkeyVisibility();
-					})
 				);
+			// button to add hotkey. Work in progress
+
+			// .addButton((button) =>
+			// 	button.setButtonText("hotkey").onClick(() => {
+			// 		app.setting.openTabById("hotkeys");
+			// 		const tab = (this.app.tab.searchInputEl.value =
+			// 			"manager");
+			// 		tab.updateHotkeyVisibility();
+			// 	})
+			// );
 			s.infoEl.remove();
 		});
 
